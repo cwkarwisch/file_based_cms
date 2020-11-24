@@ -1,15 +1,15 @@
-<% if session[:message] %>
-  <div class="message">
-    <%= display_alert %>
-  </div>
-<% end %>
-
 <ul>
   <% @files.sort.each do |file| %>
     <li>
       <a href="/<%= file %>"><%= file %></a>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp
-      <a href="/<%= file %>/edit"?>Edit</a>
+      &nbsp
+      <a href="/<%= file %>/edit"?>edit</a>
+      &nbsp
+      <form class="inline" action="/<%= file %>/delete" method="post">
+        <button type="submit">delete</button>
+      </form>
     </li>
   <% end %>
 </ul>
+
+<p><a href='/new'>New Document</a></p>
