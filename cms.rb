@@ -34,6 +34,13 @@ def load_file_contents(file_path)
   end
 end
 
+def create_file(filename)
+  if File.extname(filename).empty?
+    filename = filename + '.txt'
+  end
+  File.open(File.join(data_path, filename), 'w')
+end
+
 helpers do
   def display_alert
     session.delete(:message)
@@ -48,6 +55,25 @@ end
 get '/' do
   @files = Dir.glob(File.join(data_path, '*')).map { |file| File.basename(file) }
   erb :index, layout: :layout
+end
+
+# Display form to create a new document
+get '/new' do
+  erb :new, layout: :layout
+end
+
+# Create a new document
+post '/new' do
+  filename = params[:new_document].strip
+  if filename.empty?
+    session[:message] = 'A name is required.'
+    status 422
+    erb :new, layout: :layout
+  else
+    create_file(filename)
+    session[:message] = "#{filename} was created."
+    redirect '/'
+  end
 end
 
 # Display contents of specific file
@@ -79,5 +105,13 @@ post '/:filename/edit' do
   edited_contents = params[:edit_contents]
   File.write(@file_path, edited_contents)
   session[:message] = "#{params[:filename]} has been updated."
+  redirect '/'
+end
+
+# Delete an individual file
+post '/:filename/delete' do
+  file_path = File.join(data_path, params[:filename])
+  File.delete(file_path)
+  session[:message] = "#{params[:filename]} was deleted."
   redirect '/'
 end
