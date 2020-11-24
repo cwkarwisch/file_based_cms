@@ -12,4 +12,17 @@
   <% end %>
 </ul>
 
-<p><a href='/new'>New Document</a></p>
+<p><a href="/new">New Document</a></p>
+<br>
+
+<% if logged_in? %>
+  <p class="user-status">Signed in as <%= session[:username] %>.
+    <form action="/users/logout" method="post">
+      <button type="submit">Sign Out</button>
+    </form>
+  </p>
+<% else %>
+  <form action="/users/login" method="get">
+    <button class="user-status" type="submit">Sign In</button>
+  </form>
+<% end %>

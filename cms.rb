@@ -10,6 +10,10 @@ configure do
   set :erb, :escape_html => true
 end
 
+def logged_in?
+  session[:logged_in]
+end
+
 def data_path
   if ENV['RACK_ENV'] == 'test'
     File.expand_path('../test/data', __FILE__)
@@ -55,6 +59,33 @@ end
 get '/' do
   @files = Dir.glob(File.join(data_path, '*')).map { |file| File.basename(file) }
   erb :index, layout: :layout
+end
+
+# Display sign in screen
+get '/users/login' do
+  erb :login, layout: :layout
+end
+
+# Sign in
+post '/users/login' do
+  if params[:username] == 'admin' && params[:password] == 'secret'
+    session[:logged_in] = true
+    session[:username] = params[:username]
+    session[:message] = 'Welcome!'
+    redirect '/'
+  else
+    status 422
+    session[:message] = 'Invalid Credentials'
+    erb :login, layout: :layout
+  end
+end
+
+# Sign out
+post '/users/logout' do
+  session[:logged_in] = false
+  session[:message] = 'You have been signed out.'
+  session.delete(:username)
+  redirect '/'
 end
 
 # Display form to create a new document

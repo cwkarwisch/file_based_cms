@@ -142,6 +142,7 @@ class CMSTest < Minitest::Test
   def test_create_new_file_with_no_filename
     post '/new', params={new_document: ''}
 
+    assert_equal 422, last_response.status
     assert_includes last_response.body, 'A name is required.'
   end
 
@@ -169,5 +170,58 @@ class CMSTest < Minitest::Test
 
     assert_equal 200, last_response.status
     refute_includes last_response.body, 'test_file.txt'
+  end
+
+  def test_sign_in_button_on_index_when_user_logged_out
+    get '/'
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Sign In'
+  end
+
+  def test_sign_in_page
+    get '/users/login'
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Username'
+    assert_includes last_response.body, 'Password'
+    assert_includes last_response.body, 'Sign In'
+    assert_includes last_response.body, '<input'
+    assert_includes last_response.body, '<button type="submit"'
+  end
+
+  def test_failed_login
+    post '/users/login', params={username: 'testname', password: 'test_pw'}
+
+    assert_equal 422, last_response.status
+
+    assert_includes last_response.body, 'Invalid Credentials'
+    assert_includes last_response.body, 'testname'
+  end
+
+  def test_successful_login
+    post '/users/login', params={username: 'admin', password: 'secret'}
+
+    assert_equal 302, last_response.status
+
+    get last_response['Location']
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Welcome!'
+    assert_includes last_response.body, 'Signed in as admin.'
+    assert_includes last_response.body, 'Sign Out'
+  end
+
+  def test_logout
+    post '/users/login', params={username: 'admin', password: 'secret'}
+
+    post '/users/logout'
+    assert_equal false, last_request.session[:logged_in]
+
+    get last_response['Location']
+    assert_equal 200, last_response.status
+    assert_nil last_request.session[:username]
+    assert_includes last_response.body, 'You have been signed out.'
+    assert_includes last_response.body, 'Sign In'
   end
 end
