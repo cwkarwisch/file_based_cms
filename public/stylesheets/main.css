@@ -15,3 +15,7 @@ textarea {
   padding: 10px;
   background: #FFFF99;
 }
+
+form.inline {
+  display: inline;
+}
