@@ -37,6 +37,8 @@ class CMSTest < Minitest::Test
     assert_equal 'text/html;charset=utf-8', last_response['Content-Type']
     assert_includes last_response.body, 'about.txt'
     assert_includes last_response.body, 'changes.txt'
+    assert_includes last_response.body, 'New Document'
+    assert_includes last_response.body, 'delete'
   end
 
   def test_filename_exists
@@ -109,5 +111,63 @@ class CMSTest < Minitest::Test
 
     assert_equal 200, last_response.status
     assert_includes last_response.body, "This is a test file. It's been tested."
+  end
+
+  def test_new_file_template
+    get '/new'
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Add a new document:'
+    assert_includes last_response.body, 'input'
+    assert_includes last_response.body, 'Create'
+  end
+
+  def test_create_new_file_with_file_extension
+    post '/new', params={new_document: 'new_doc_test.txt'}
+
+    assert_equal 302, last_response.status
+
+    get last_response['Location']
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'new_doc_test.txt was created.'
+
+    get '/'
+
+    assert_equal 200, last_response.status
+    refute_includes last_response.body, 'new_doc_test.txt was created.'
+    assert_includes last_response.body, 'new_doc_test.txt'
+  end
+
+  def test_create_new_file_with_no_filename
+    post '/new', params={new_document: ''}
+
+    assert_includes last_response.body, 'A name is required.'
+  end
+
+  def test_create_new_file_without_file_extension
+    post '/new', params={new_document: 'new_doc_test'}
+
+    get last_response['Location']
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'new_doc_test.txt'
+  end
+
+  def test_delete_file
+    create_file('test_file.txt')
+
+    post '/test_file.txt/delete'
+
+    assert_equal 302, last_response.status
+    get last_response['Location']
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'test_file.txt was deleted.'
+
+    get '/'
+
+    assert_equal 200, last_response.status
+    refute_includes last_response.body, 'test_file.txt'
   end
 end
