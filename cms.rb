@@ -1,8 +1,9 @@
 require 'sinatra'
 require 'sinatra/reloader'
 require 'tilt/erubis'
-# require 'sinatra/content_for'
 require 'redcarpet'
+require 'yaml'
+require 'bcrypt'
 
 configure do
   enable :sessions
@@ -11,7 +12,34 @@ configure do
 end
 
 def logged_in?
-  session[:logged_in]
+  session[:username] ? true : false
+end
+
+def validate_user_logged_in
+  unless logged_in?
+    session[:message] = 'You must be signed in to do that.'
+    redirect '/'
+  end
+end
+
+def valid_credentials?(username, password)
+  accounts = load_credentials
+  return false unless accounts.key?(username)
+  return false unless valid_password?(password, accounts[username])
+  true
+end
+
+def load_credentials
+  if ENV['RACK_ENV'] == 'test'
+    path = File.expand_path('../test/accounts.yml', __FILE__)
+  else
+    path = File.expand_path('../accounts.yml', __FILE__)
+  end
+  YAML.load_file(path)
+end
+
+def valid_password?(password, encryted_password)
+  BCrypt::Password.new(encryted_password) == password
 end
 
 def data_path
@@ -68,8 +96,7 @@ end
 
 # Sign in
 post '/users/login' do
-  if params[:username] == 'admin' && params[:password] == 'secret'
-    session[:logged_in] = true
+  if valid_credentials?(params[:username], params[:password])
     session[:username] = params[:username]
     session[:message] = 'Welcome!'
     redirect '/'
@@ -82,7 +109,6 @@ end
 
 # Sign out
 post '/users/logout' do
-  session[:logged_in] = false
   session[:message] = 'You have been signed out.'
   session.delete(:username)
   redirect '/'
@@ -90,11 +116,13 @@ end
 
 # Display form to create a new document
 get '/new' do
+  validate_user_logged_in
   erb :new, layout: :layout
 end
 
 # Create a new document
 post '/new' do
+  validate_user_logged_in
   filename = params[:new_document].strip
   if filename.empty?
     session[:message] = 'A name is required.'
@@ -120,6 +148,7 @@ end
 
 # Display form to edit an individual file
 get '/:filename/edit' do
+  validate_user_logged_in
   @file_path = File.join(data_path, params[:filename])
   @file_name = File.basename(@file_path)
   if File.exist?(@file_path)
@@ -132,6 +161,7 @@ end
 
 # Edit an individual file
 post '/:filename/edit' do
+  validate_user_logged_in
   @file_path = File.join(data_path, params[:filename])
   edited_contents = params[:edit_contents]
   File.write(@file_path, edited_contents)
@@ -141,6 +171,7 @@ end
 
 # Delete an individual file
 post '/:filename/delete' do
+  validate_user_logged_in
   file_path = File.join(data_path, params[:filename])
   File.delete(file_path)
   session[:message] = "#{params[:filename]} was deleted."
